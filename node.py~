@@ -1,0 +1,56 @@
+"""This file implements a Node, a very simple class that simply has a left and a right child (both
+Nodes or None), and a value.
+
+Team: Jocelyn, Kevin, Nicholas
+Author: Nicholas
+"""
+
+from functools import total_ordering  # neat trick
+
+
+@total_ordering   # now every comparison function is defined. Neato!
+class Node:
+    """A Node of a tree."""
+
+    def __init__(self, val, left, right):
+        """Represents a node of a binary tree.  Val is the value this Node has: can be anything but should
+        probably be hashable. Left and right are child Nodes, or None if this Node currently has no
+        child there."""
+        self.val = val
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        """Gives the Node's value and the values of its children."""
+        ans = []  # create list of lines and join at the end
+        ans.append("Node: {}\n".format(str(self.val)))
+        ans.append("\tLeft: {}\n".format(str(self.left)))
+        ans.append("\tRight: {}\n".format(str(self.right)))
+        return ans
+
+    def __repr__(self):
+        """Gives the possible constructor."""
+        return "Node({}, {}, {})".format(repr(self.val), repr(self.left), repr(self.right))
+
+    def children(self):
+        """Returns a tuple (L, R) of children, if both exist, otherwise just the one that does, or (). Note
+        that this only returns a truthy value if the node has children: very useful!
+        """
+        if self.left is None:
+            return () if self.right is None else (self.right,)
+        elif self.right is None:
+            return (self.left,)
+        else:
+            return (self.left, self.right)
+
+    def all_children(self):
+        """Returns a tuple (L, R) of children, but includes None instead of removing it."""
+        return (self.left, self.right)
+
+    def __eq__(self, other):
+        """Uses the value, not the children, in comparison."""
+        return self.val == other.val
+
+    def __le__(self, other):
+        """Uses the value, not the children, in comparison."""
+        return self.val <= other.val

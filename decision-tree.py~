@@ -1,0 +1,19 @@
+
+"""This class creates a decision tree classifier for a given dataset."""
+
+from itertools import combinations
+
+
+class DecisionTree:
+    """Represents a decision tree classifier."""
+
+    def __init__(self):
+        """Creates a decision tree that can be fit to data."""
+
+        self.tree = None
+
+
+    def fit(self, X, y):
+        """Fits a given input matrix to a given output vector using a decision tree."""
+
+        classes = None

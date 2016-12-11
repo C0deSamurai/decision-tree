@@ -1,0 +1,29 @@
+"""This is a class for encoding a split at a node of a decision tree in a class. That way, we can
+represent more than one kind of split as both a class method function that splits data, and as a
+logical condition in a human-readable format.
+
+Team: Jocelyn, Kevin, Nicholas
+Author: Nicholas
+"""
+
+
+class Split:
+    """Represents a decision tree split. For now, this is just a less-than-or-equal-to test with a
+    given value, but it could be extended in the future."""
+
+    def __init__(self, val):
+        """Val is the value that the split checks for <= relation to: for example, val=3.6 would
+        make a Split to test x <= 3.6 for some input x."""
+        self.val = val
+
+    def __str__(self):
+        """No explanation needed!"""
+        return "x: x <= {}".format(str(self.val))
+
+    def __repr__(self):
+        """Also no explanation needed."""
+        return "Split({})".format(repr(self.val))
+
+    def split(self, x):
+        """Classifies a given input x by testing if x <= self.val."""
+        return x <= self.val
