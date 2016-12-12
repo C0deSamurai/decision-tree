@@ -1,6 +1,7 @@
 
 """This class creates a decision tree classifier for a given dataset."""
 
+import pandas as pd
 from node import Node
 from split import Split
 from tree import Tree
@@ -53,12 +54,12 @@ class DecisionTree:
         """
 
         # generate indices of cutoffs instead of just the data to preserve class data
-        good_indices = [i for i in range(data.shape[0]) if split.split(i, data, True)]
+        good_indices = [i for i in range(data.shape[0]) if split.split(i, pd.DataFrame(data), True)]
         bad_indices = [i for i in range(data.shape[0]) if i not in good_indices]
 
         good = (data.iloc[good_indices, :], classes.iloc[good_indices, :])
         bad = (data.iloc[bad_indices, :], classes.iloc[bad_indices, :])
-        return (good, bad)
+        return (bad, good)
 
     def test_split(self, data, classes, split):
         """Given data with associated classes and a split, returns the sum of the Gini impurity of
@@ -146,7 +147,10 @@ class DecisionTree:
                         return int(curr[0][1].mean())
             else:  # go down to the correct child and try again
                 if curr[1].split(0, X, use_iloc=True):  # split with the input data
+
                     curr_pos = curr_pos * 2 + 1  # right child
+
                 else:  # left child, because the Split returned False
                     curr_pos *= 2
+
             # now, just repeat until we get to a leaf!
