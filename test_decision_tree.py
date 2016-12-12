@@ -47,15 +47,14 @@ tree = Tree(Node('a',
 def print_tree(t):
     print('\n'.join([repr(x) for x in list(t)]))
 
-print()
-print(tree)
-tree.set_child(5, 0, Node('f', None, None))
-print()
-print(tree)
+#print()
+#print(tree)
+#tree.set_child(5, 0, Node('f', None, None))
+#print()
+#print(tree)
 
 x_pred = X.iloc[0]
 
 dt = DecisionTree()
 dt.raw_fit(X, y)
 dt.predict(x_pred)
-

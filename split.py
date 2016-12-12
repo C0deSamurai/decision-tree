@@ -23,7 +23,7 @@ class Split:
 
     def __str__(self):
         """No explanation needed!"""
-        return "{{} <= {}}".format(str(self.predictor_name), str(self.val))
+        return "{{{} <= {}}}".format(str(self.predictor_name), str(self.val))
 
     def __repr__(self):
         """Also no explanation needed."""

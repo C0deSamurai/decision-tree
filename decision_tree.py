@@ -1,6 +1,9 @@
 
 """This class creates a decision tree classifier for a given dataset."""
 
+from copy import deepcopy
+
+
 import pandas as pd
 from node import Node
 from split import Split
@@ -15,7 +18,14 @@ class DecisionTree:
         self.tree = None
 
     def __str__(self):
-        return str(self.tree)
+        """Ignores DataFrames, only prints splits."""
+        new_tree = deepcopy(self.tree)
+        for node in [n for n in list(new_tree) if n is not None]:
+            if len(node.val) == 1 or node.val[1] is None:
+                node.val = "<data>"
+            else:
+                node.val = str(node.val[1])
+        return str(new_tree)
 
     @classmethod
     def gini(cls, classes):
