@@ -34,6 +34,9 @@ class Split:
         to use for splitting, or, if use_iloc is True, the numerical index of a row (starting at
         0). Returns the result of the split applied to that particular entry.
         """
+        if not hasattr(x, "iloc"):  # a single number
+            return x <= self.val
+
         if use_iloc:
             entry = predictor_matrix[self.predictor_name].iloc[x]
         else:

@@ -34,7 +34,7 @@ X["Body Temperature"] = X["Body Temperature"].apply(lambda x: 1 if x == "warm-bl
 for col in X.columns[1:]:
     X[col] = X[col].apply(lambda x: 1 if x == "yes" else 0)
 
-y = y.apply(lambda x: 1 if x == "yes" else 0)
+y = pd.DataFrame(y.apply(lambda x: 1 if x == "yes" else 0))
 
 
 tree = Tree(Node('a',
@@ -47,14 +47,15 @@ tree = Tree(Node('a',
 def print_tree(t):
     print('\n'.join([repr(x) for x in list(t)]))
 
-# print()
-# print(tree)
-# tree.set_child(5, 0, Node('f', None, None))
-# print()
-# print(tree)
+print()
+print(tree)
+tree.set_child(5, 0, Node('f', None, None))
+print()
+print(tree)
 
 x_pred = X.iloc[0]
 
 dt = DecisionTree()
 dt.raw_fit(X, y)
 dt.predict(x_pred)
+

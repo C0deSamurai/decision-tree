@@ -17,13 +17,14 @@ class DecisionTree:
         return str(self.tree)
 
     @classmethod
-    def gini(cls, data, classes):
-        """Computes the Gini impurity of the given data, with a given second vector (of width equal to the
-        number of classes and the height of the data matrix) that corresponds to the class data for
-        each entry in data, e.g., 0's and 1's.
+    def gini(cls, classes):
+        """Computes the Gini impurity of the given data, a class vector or matrix in 0's and 1's.
         """
-        if len(classes.shape) == 1:  # only one entry
-            p = len([x for x in classes if x == 1]) / len(classes)
+        if classes.shape[1] == 1:  # only one entry
+            if len(classes) == 0:
+                return 0  # the empty list is pure!
+
+            p = len([x for x in classes.iloc[:, 0] if x == 1]) / len(classes)
             return 1 - (1 - p) ** 2 - p ** 2
         impurity = 0
         for class_name in classes:
@@ -37,11 +38,11 @@ class DecisionTree:
         """Given input data and a corresponding matrix of classes, returns a list of Split objects
         corresponding to all the possible splits of that dataset at that time."""
         splits = []
-        for predictor_name in data:
+        for predictor_name in data.columns:
             pred = data[predictor_name]
             # generate every possible split cutoff that would mean something
             cutoffs = list(pred)
-            cutoffs.remove(max(cutoffs))  # x <= max_x does nothing
+            cutoffs = [c for c in cutoffs if c != max(cutoffs)]  # remove topmost element
             splits += [Split(predictor_name, cutoff) for cutoff in cutoffs]
         return splits
 
@@ -52,22 +53,19 @@ class DecisionTree:
         """
 
         # generate indices of cutoffs instead of just the data to preserve class data
-        if len(data.shape) > 1:
-            good_indices = [i for i in range(len(data[0])) if split.split(i, data, True)]
-            bad_indices = [i for i in range(len(data[0])) if i not in good_indices]
-        else:
-            good_indices = [i for i in range(len(data)) if split.split(i, data, True)]
-            bad_indices = [i for i in range(len(data)) if i not in good_indices]
-            
-        good = (data.iloc[good_indices], classes.iloc[good_indices])
-        bad = (data.iloc(bad_indices), classes.iloc[bad_indices])
+        good_indices = [i for i in range(data.shape[0]) if split.split(i, data, True)]
+        bad_indices = [i for i in range(data.shape[0]) if i not in good_indices]
+
+        good = (data.iloc[good_indices, :], classes.iloc[good_indices, :])
+        bad = (data.iloc[bad_indices, :], classes.iloc[bad_indices, :])
         return (good, bad)
 
     def test_split(self, data, classes, split):
         """Given data with associated classes and a split, returns the sum of the Gini impurity of
         the child nodes of this split if it is effected."""
+
         left, right = self.execute_split(data, classes, split)
-        return self.gini(*left) + self.gini(*right)
+        return self.gini(left[1]) + self.gini(right[1])
 
     def create_split(self, pos):
         """Given a position in the decision tree (1-based breadth-first indexing), first checks to see if
@@ -76,9 +74,11 @@ class DecisionTree:
         creating two new children that are the results of the split (left for false, right for
         true).
         """
+
         node = self.tree[pos-1]
         node_val = node.val[0]  # the tuple (data, classes)
-        curr_gini = self.gini(*node_val)
+        curr_gini = self.gini(node_val[1])
+
         if curr_gini == 0:  # data is pure
             self.tree.set_child(pos, 0, None)
             self.tree.set_child(pos, 1, None)  # make this a leaf
@@ -87,21 +87,19 @@ class DecisionTree:
             splits = self.gen_splits(*node_val)
             # find the best one
             best = min(splits, key=lambda split: self.test_split(*node_val, split))
-            if len(node_val) == 1:  # no split in the node yet
-                node_val.append(best)
+            if len(node.val) == 1:  # no split in the node yet
+                node.val.append(best)
             else:  # overwrite a split
-                node_val[1].append(best)
+                node.val[1].append(best)
             # execute it
-            left, right = self.execute_split(best)
+            left, right = self.execute_split(*node_val, best)
+
             self.tree.set_child(pos, 0, Node([left], None, None))
             self.tree.set_child(pos, 1, Node([right], None, None))
 
     def recursively_create_splits(self, pos):
         """For the current Node, recursively splits all of its children (generating them as it goes)
         until all of the leaves are pure, returning None."""
-        print("Creating a tree at position {}".format(pos))
-        print(len(self.tree.nodes))
-        # print(self.tree)
         if pos > len(list(self.tree)) or self.tree[pos-1] is None:  # we stop here
             return None
         else:  # create two children and recurse to split them
