@@ -6,6 +6,10 @@ import pandas as pd
 from decision_tree import DecisionTree
 from tree import Tree
 from node import Node
+from sklearn import datasets
+from sklearn.cross_validation import train_test_split
+
+iris = datasets.load_iris()
 
 
 mat = [["human", "warm-blooded", "yes", "no", "no", "yes"],
@@ -53,8 +57,15 @@ def print_tree(t):
 #print()
 #print(tree)
 
-x_pred = X.iloc[0]
+iris_x_train, iris_x_test, iris_y_train, iris_y_test = \
+    train_test_split(iris.data, iris.target, test_size=0.2)
+
+iris_x_train = pd.DataFrame(iris_x_train, columns=iris.feature_names)
+iris_x_test = pd.DataFrame(iris_x_test, columns=iris.feature_names)
+iris_y_train = pd.DataFrame({'type': iris_y_train})
+iris_y_test = pd.DataFrame({'type': iris_y_test})
 
 dt = DecisionTree()
-dt.raw_fit(X, y)
-dt.predict(x_pred)
+dt.raw_fit(iris_x_train, iris_y_train)
+print(iris_x_test.apply(dt.predict))
+print(iris_y_test)

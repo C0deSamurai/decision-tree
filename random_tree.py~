@@ -1,0 +1,3 @@
+"""This file implements a subclass of DecisionTree that has one small caveat: when it makes a split,
+it chooses a random subset of the features it has to make a split with, thereby reducing the tree's
+tendency to be dominated by a few strong predictors."""

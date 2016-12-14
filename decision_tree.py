@@ -28,22 +28,26 @@ class DecisionTree:
         return str(new_tree)
 
     @classmethod
-    def gini(cls, classes):
-        """Computes the Gini impurity of the given data, a class vector or matrix in 0's and 1's.
-        """
-        if classes.shape[1] == 1:  # only one entry
-            if len(classes) == 0:
-                return 0  # the empty list is pure!
-
-            p = len([x for x in classes.iloc[:, 0] if x == 1]) / len(classes)
-            return 1 - (1 - p) ** 2 - p ** 2
+    def gini_vector(cls, col):
+        """Given a single input Series with a single column filled with the digits 0-n, computes the
+    Gini impurity."""
         impurity = 0
-        for class_name in classes:
-            class_ = classes[class_name]
-            p_class = sum(class_.map(lambda x: 1 if x else 0)) / len(class_)
+        n = len(set(col))
+        if n <= 1:  # sets without any elements or with a single class are pure by default
+            return 0
+
+        for i in range(n):
+            p_class = sum(col.map(lambda x: 1 if x == i else 0)) / len(col)
             impurity += p_class ** 2
 
-        return 1 - impurity  # returns 0 if the data is pure and 0.5 if it is perfectly mixed
+        return 1 - impurity
+
+    @classmethod
+    def gini(cls, classes):
+        """Computes the Gini impurity of the given data, a class vector or matrix in 0's and 1's or any
+    additional amount of classes.
+        """
+        return classes.apply(cls.gini_vector).sum()
 
     def gen_splits(self, data, classes):
         """Given input data and a corresponding matrix of classes, returns a list of Split objects
@@ -52,7 +56,8 @@ class DecisionTree:
         for predictor_name in data.columns:
             pred = data[predictor_name]
             # generate every possible split cutoff that would mean something
-            cutoffs = list(pred)
+            # also, remove duplicates
+            cutoffs = list(set(pred))
             cutoffs = [c for c in cutoffs if c != max(cutoffs)]  # remove topmost element
             splits += [Split(predictor_name, cutoff) for cutoff in cutoffs]
         return splits
@@ -78,6 +83,15 @@ class DecisionTree:
         left, right = self.execute_split(data, classes, split)
         return self.gini(left[1]) + self.gini(right[1])
 
+    def split_does_not_recurse(self, data, classes, split):
+        """Given data with associated classes and a split, returns True if the split is valid and confirmed
+        to not infinitely loop and False otherwise. The base criteria is whether the split separates
+        at least one element from the rest.
+
+        """
+        left, right = self.execute_split(data, classes, split)
+        return left[0].shape[0] != 0 and right[0].shape[0] != 0
+
     def create_split(self, pos):
         """Given a position in the decision tree (1-based breadth-first indexing), first checks to see if
         the data is pure. If it is, then it sets both children to None and stops. Otherwise, it
@@ -85,6 +99,7 @@ class DecisionTree:
         creating two new children that are the results of the split (left for false, right for
         true).
         """
+        print("Creating split at position {}".format(pos))
 
         node = self.tree[pos-1]
         node_val = node.val[0]  # the tuple (data, classes)
@@ -96,14 +111,25 @@ class DecisionTree:
             return None  # we're done here!
         else:  # generate possible splits
             splits = self.gen_splits(*node_val)
+            splits = [split for split in splits if self.split_does_not_recurse(*node_val, split)]
+            # print(splits)
+            if len(splits) == 0:  # no splits that separate into at least one class
+                self.tree.set_child(pos, 0, None)
+                self.tree.set_child(pos, 1, None)
+                return None
             # find the best one
             best = min(splits, key=lambda split: self.test_split(*node_val, split))
+            print([self.test_split(*node_val, split) for split in splits])
+            print(self.test_split(*node_val, best))
+            # print(sorted(splits, key=lambda split: self.test_split(*node_val, split))[:5])
             if len(node.val) == 1:  # no split in the node yet
                 node.val.append(best)
             else:  # overwrite a split
                 node.val[1].append(best)
             # execute it
             left, right = self.execute_split(*node_val, best)
+            print(best)
+            print(left[0].shape[0], right[0].shape[0])
 
             self.tree.set_child(pos, 0, Node([left], None, None))
             self.tree.set_child(pos, 1, Node([right], None, None))

@@ -1,0 +1,40 @@
+"""This file uses a random forest, a bunch of individual unpruned decision trees with access to only
+some of the features. Final classification is then done by majority vote, to remove overfitting
+noise and make the model extremely robust.
+
+There's one interesting addendum to this: in a random forest decision tree, making a split is only
+done with a subset of the features available at every step. This way, strong predictors don't
+dominate every tree they appear in and overly couple the trees.
+
+Team: Jocelyn, Kevin, Nicholas
+Author: Nicholas
+"""
+
+
+from itertools import combinations
+from decision_tree import DecisionTree
+
+
+class RandomForestClassifier:
+    """A random forest classifier."""
+    def __init__(self, b, b_ratio=False):
+        """Initializes a bare random forest classifier. B is the number of trees to use when classifying. If
+        b_ratio is True, b will instead be a ratio of the total data input dimensionality."""
+        self.b_ratio = b_ratio
+        self.b = b
+        self.trees = []
+
+    @classmethod
+    def get_random_samples(cls, choices, n):
+        """Draws n different subsets of choices and returns them as a list."""
+        
+        
+    def fit(self, x, y):
+        """Fits a random forest classifier on X mapping to Y, a vector with the same height but
+        classes instead of predictors."""
+        preds = x.columns
+        # get correct number of trees
+        tree_num = self.b if not self.b_ratio else int(self.b * len(x))
+
+        # get the right number of samples of features
+        
