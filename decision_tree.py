@@ -83,23 +83,24 @@ class DecisionTree:
         left, right = self.execute_split(data, classes, split)
         return self.gini(left[1]) + self.gini(right[1])
 
-    def split_does_not_recurse(self, data, classes, split):
-        """Given data with associated classes and a split, returns True if the split is valid and confirmed
-        to not infinitely loop and False otherwise. The base criteria is whether the split separates
-        at least one element from the rest.
-
-        """
+    def not_overfit(self, data, classes, split, k=0.05):
+        """This method can be overridden or replaced to change how much the fitting algorithm prunes the
+        tree. The default is to require that at least a fraction of the input be separated (the
+        defaut is 5%)."""
         left, right = self.execute_split(data, classes, split)
-        return left[0].shape[0] != 0 and right[0].shape[0] != 0
+        
+        return k <= left[0].shape[0] / data.shape[0] <= 1 - k
 
-    def create_split(self, pos):
+    def create_split(self, pos, prune_func):
         """Given a position in the decision tree (1-based breadth-first indexing), first checks to see if
         the data is pure. If it is, then it sets both children to None and stops. Otherwise, it
         computes the split that minimizes the Gini impurity for each child node and executes it,
         creating two new children that are the results of the split (left for false, right for
         true).
+
+        Prune_func is the pruning function to determine whether a split is valid.
         """
-        print("Creating split at position {}".format(pos))
+        # print("Creating split at position {}".format(pos))
 
         node = self.tree[pos-1]
         node_val = node.val[0]  # the tuple (data, classes)
@@ -111,7 +112,7 @@ class DecisionTree:
             return None  # we're done here!
         else:  # generate possible splits
             splits = self.gen_splits(*node_val)
-            splits = [split for split in splits if self.split_does_not_recurse(*node_val, split)]
+            splits = [split for split in splits if prune_func(*node_val, split)]
             # print(splits)
             if len(splits) == 0:  # no splits that separate into at least one class
                 self.tree.set_child(pos, 0, None)
@@ -119,8 +120,6 @@ class DecisionTree:
                 return None
             # find the best one
             best = min(splits, key=lambda split: self.test_split(*node_val, split))
-            print([self.test_split(*node_val, split) for split in splits])
-            print(self.test_split(*node_val, best))
             # print(sorted(splits, key=lambda split: self.test_split(*node_val, split))[:5])
             if len(node.val) == 1:  # no split in the node yet
                 node.val.append(best)
@@ -128,39 +127,48 @@ class DecisionTree:
                 node.val[1].append(best)
             # execute it
             left, right = self.execute_split(*node_val, best)
-            print(best)
-            print(left[0].shape[0], right[0].shape[0])
+            # print(best)
+            # print(left[0].shape[0], right[0].shape[0])
 
             self.tree.set_child(pos, 0, Node([left], None, None))
             self.tree.set_child(pos, 1, Node([right], None, None))
 
-    def recursively_create_splits(self, pos):
-        """For the current Node, recursively splits all of its children (generating them as it goes)
-        until all of the leaves are pure, returning None."""
+    def recursively_create_splits(self, pos, prune_func):
+        """For the current Node, recursively splits all of its children (generating them as it goes) until
+        all of the leaves are pure, returning None. Prune_func is the function to reduce
+        overfitting.
+
+        """
         if pos > len(list(self.tree)) or self.tree[pos-1] is None:  # we stop here
             return None
         else:  # create two children and recurse to split them
-            self.create_split(pos)
-            self.recursively_create_splits(pos * 2)  # left child
-            self.recursively_create_splits(pos * 2 + 1)  # right child
+            self.create_split(pos, prune_func)
+            self.recursively_create_splits(pos * 2, prune_func)  # left child
+            self.recursively_create_splits(pos * 2 + 1, prune_func)  # right child
             return None
 
-    def raw_fit(self, X, y):
+    def fit(self, X, y, pruning_func=None):
         """Fits a given input matrix to a given output vector using a decision tree. X should be a DataFrame
         of numerical variables with any index or column names. y should be a vector or matrix with
         the same height as X, as many columns as classes to predict, and each column should be a
-        list of 0's and 1's for a given class. Does no pruning.
+        list of 0's and 1's for a given class. The pruning_func parameter can be filled with any
+        function that takes in three arguments (data, classes, split) and returns True if that split
+        is allowed and False otherwise. The default, specified with None, is to only use splits that
+        separate 5% of the input.
 
         """
         # start with just the entire dataset at the root, with no split
         # I'm going to represent a single node of a tree as a value [(data, classes), split]
         # where data and classes are "what's left" and split is the Split function that gives the
         # left and right children, or None if the data is pure or the splits have stopped
+        if pruning_func is None:  # use default
+            pruner = self.not_overfit
+            
         self.tree = Tree(Node([(X, y)], None, None))
-        self.recursively_create_splits(1)  # pretty anticlimactic
+        self.recursively_create_splits(1, prune_func=pruner)  # pretty anticlimactic
         return None
 
-    def predict(self, X):
+    def __predict_vec(self, X):
         """Given an input vector with the required number of predictors, returns an output vector
         y_hat representing the predicted classes for all of the classes it was fit to."""
 
@@ -190,3 +198,42 @@ class DecisionTree:
                     curr_pos *= 2
 
             # now, just repeat until we get to a leaf!
+
+    def predict(self, X):
+        """For every row in X, predicts the classes and returns a matrix Y representing the
+        predicted classes."""
+        if len(X.shape) == 1:  # single row
+            return self.__predict_vec(X)
+
+        return X.apply(self.__predict_vec, axis=1)
+
+    def __score_col(self, col1, col2):
+        """Returns the accuracy score for two Series."""
+        correct = 0
+        for i in range(len(col1)):
+            if col1.iloc[i] == col2.iloc[i]:
+                correct += 1
+        return correct / len(col1)
+
+    def score(self, X, true_y):
+        """Gets the accuracy score of the classifier given the X as input and with true_y as the
+        actual values. If there are multiple classes, returns an iterable of each accuracy score."""
+
+        preds = self.predict(X)
+        if len(preds.shape) >= 2 and preds.shape[1] > 1:  # multiple classes
+            scores = []
+            for colname in preds:
+                scores.append(self.__score_col(preds[colname], true_y[colname]))
+            return scores
+        else:  # just one class
+            if isinstance(preds, pd.DataFrame):  # convert to Series
+                converted_pred = preds.iloc[:, 0]
+            else:
+                converted_pred = preds
+
+            if isinstance(true_y, pd.DataFrame):  # convert to Series
+                converted_true = true_y.iloc[:, 0]
+            else:
+                converted_true = true_y
+
+            return self.__score_col(converted_pred, converted_true)

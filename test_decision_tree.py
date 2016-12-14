@@ -58,7 +58,7 @@ def print_tree(t):
 #print(tree)
 
 iris_x_train, iris_x_test, iris_y_train, iris_y_test = \
-    train_test_split(iris.data, iris.target, test_size=0.2)
+    train_test_split(iris.data, iris.target, test_size=0.4)
 
 iris_x_train = pd.DataFrame(iris_x_train, columns=iris.feature_names)
 iris_x_test = pd.DataFrame(iris_x_test, columns=iris.feature_names)
@@ -66,6 +66,7 @@ iris_y_train = pd.DataFrame({'type': iris_y_train})
 iris_y_test = pd.DataFrame({'type': iris_y_test})
 
 dt = DecisionTree()
-dt.raw_fit(iris_x_train, iris_y_train)
-print(iris_x_test.apply(dt.predict))
-print(iris_y_test)
+dt.fit(iris_x_train, iris_y_train)
+y_bar = dt.predict(iris_x_test)
+y = iris_y_test
+print(dt.score(iris_x_test, iris_y_test))
